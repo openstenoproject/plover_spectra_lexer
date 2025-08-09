@@ -4,6 +4,7 @@ from spectra_lexer import Spectra, SpectraOptions
 from spectra_lexer.app_qt import build_app
 from spectra_lexer.plover.plugin import EngineWrapper, IPlover, PloverExtension
 from spectra_lexer.qt import ICON_PACKAGE, ICON_PATH
+from importlib.resources import files as _res_files
 
 
 class _Dummy:
@@ -23,7 +24,8 @@ class PloverPlugin:
     # Class constants required by Plover for toolbar.
     __doc__ = 'See the breakdown of words using steno rules.'
     TITLE = 'Spectra'
-    ICON = ':'.join(['asset', ICON_PACKAGE, ICON_PATH])
+    # loading the icon this way so we don't need to compile a Qt resource bundle (.qrc)
+    ICON = str((_res_files(ICON_PACKAGE) / ICON_PATH))
     ROLE = 'spectra_dialog'
     SHORTCUT = 'Ctrl+Shift+L'
 

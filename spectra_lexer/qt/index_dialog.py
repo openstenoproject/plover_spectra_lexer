@@ -1,12 +1,17 @@
 from typing import Callable
 
-from PyQt5.QtCore import QObject, Qt
-from PyQt5.QtWidgets import QDialog, QLabel, QWidget
+from PySide6.QtCore import QObject, Qt
+from PySide6.QtWidgets import QDialog, QLabel, QWidget
 
 from .index_dialog_ui import Ui_IndexSizeDialog
 
 SizeCallback = Callable[[int], None]
-WINDOW_FLAGS = Qt.CustomizeWindowHint | Qt.Dialog | Qt.WindowCloseButtonHint | Qt.WindowTitleHint
+WINDOW_FLAGS = (
+    Qt.WindowType.CustomizeWindowHint
+    | Qt.WindowType.Dialog
+    | Qt.WindowType.WindowCloseButtonHint
+    | Qt.WindowType.WindowTitleHint
+)
 
 
 class SliderInfo(QObject):

@@ -2,9 +2,9 @@
 
 from typing import Union
 
-from PyQt5.QtCore import QBuffer, QRectF, QSize
-from PyQt5.QtGui import QColor, QImage, QImageWriter, QPaintDevice, QPainter
-from PyQt5.QtSvg import QSvgRenderer
+from PySide6.QtCore import QBuffer, QIODevice, QRectF, QSize
+from PySide6.QtGui import QColor, QImage, QImageWriter, QPaintDevice, QPainter
+from PySide6.QtSvg import QSvgRenderer
 
 QtSVGData = Union[bytes, str]  # Valid formats for an SVG data string. The XML header is not required.
 
@@ -12,8 +12,8 @@ QtSVGData = Union[bytes, str]  # Valid formats for an SVG data string. The XML h
 class SVGEngine:
     """ Renders SVG data on Qt paint devices. """
 
-    def __init__(self, *, render_hints=QPainter.Antialiasing) -> None:
-        self._data = b""                   # Current XML SVG binary data.
+    def __init__(self, *, render_hints=QPainter.RenderHint.Antialiasing) -> None:
+        self._data: bytes = b""            # Current XML SVG binary data.
         self._renderer = QSvgRenderer()    # Qt SVG renderer.
         self._render_hints = render_hints  # SVG rendering quality hints (such as anti-aliasing).
 
@@ -32,7 +32,7 @@ class SVGEngine:
 
     def dumps(self) -> str:
         """ Return the current SVG data as a string. """
-        return self._data.decode('utf-8')
+        return bytes(self._data).decode('utf-8')
 
     def dump(self, filename:str) -> None:
         """ Save the current SVG data directly to disk. """
@@ -86,10 +86,10 @@ class SVGRasterizer:
         scale = min(self._w_max / vw, self._h_max / vh)
         w = round(vw * scale)
         h = round(vh * scale)
-        im = QImage(w, h, QImage.Format_ARGB32)
+        im = QImage(w, h, QImage.Format.Format_ARGB32)
         im.fill(self._bg_color)
         with QPainter(im) as p:
-            p.setRenderHints(QPainter.Antialiasing)
+            p.setRenderHints(QPainter.RenderHint.Antialiasing)
             svg.render(p, QRectF(0, 0, w, h))
         return im
 
@@ -97,6 +97,7 @@ class SVGRasterizer:
         """ Rasterize an SVG image to PNG format and return the raw bytes. """
         im = self._render(svg_data)
         buf = QBuffer()
+        buf.open(QIODevice.OpenModeFlag.WriteOnly)
         writer = QImageWriter(buf, b'PNG')
         writer.setCompression(compression)
         writer.write(im)

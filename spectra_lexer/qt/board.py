@@ -1,6 +1,6 @@
-from PyQt5.QtCore import pyqtSignal
-from PyQt5.QtGui import QColor, QContextMenuEvent, QGuiApplication, QImage, QPaintDevice, QPainter, QPixmap
-from PyQt5.QtWidgets import QMenu, QWidget
+from PySide6.QtCore import Signal
+from PySide6.QtGui import QColor, QContextMenuEvent, QGuiApplication, QImage, QPaintDevice, QPainter, QPixmap
+from PySide6.QtWidgets import QMenu, QWidget
 
 from .svg import QtSVGData, SVGEngine
 
@@ -29,7 +29,7 @@ class BoardWidget(QWidget):
     PAINT_BG = QColor(0, 0, 0, 0)         # Transparent background for widget painting.
     COPY_BG = QColor(255, 255, 255, 255)  # White background for the clipboard.
 
-    resized = pyqtSignal()
+    resized = Signal()
 
     def __init__(self, *args) -> None:
         super().__init__(*args)

@@ -1,4 +1,4 @@
-from PyQt5.QtCore import pyqtSignal
+from PySide6.QtCore import Signal
 
 from . import introspect
 from .qt import TerminalDialog
@@ -9,8 +9,8 @@ class ConsoleDialog(TerminalDialog):
     """ Qt console dialog tool. Useful for live inspection of a Python object.
         All reads and writes are done with signals for thread safety. """
 
-    _sig_write = pyqtSignal([str])  # Emitted to write output text using the main thread.
-    _sig_close = pyqtSignal([])     # Emitted to close the dialog using the main thread.
+    _sig_write = Signal(str)  # Emitted to write output text using the main thread.
+    _sig_close = Signal()     # Emitted to close the dialog using the main thread.
 
     write_limit = 100000  # Maximum number of characters to add in one write without cropping.
 

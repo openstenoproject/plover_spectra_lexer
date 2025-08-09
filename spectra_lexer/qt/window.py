@@ -1,12 +1,12 @@
-from PyQt5.QtCore import pyqtSignal, QEvent, QObject
-from PyQt5.QtGui import QIcon, QPixmap
-from PyQt5.QtWidgets import QApplication, QMainWindow
+from PySide6.QtCore import Signal, QEvent, QObject
+from PySide6.QtGui import QIcon, QPixmap
+from PySide6.QtWidgets import QApplication, QMainWindow
 
 
 class WindowController(QObject):
     """ Wrapper class with methods for manipulating the main window. """
 
-    activated = pyqtSignal()  # Emitted when the window state changes from inactive to active.
+    activated = Signal()  # Emitted when the window state changes from inactive to active.
 
     def __init__(self, w_window:QMainWindow) -> None:
         super().__init__(w_window)
@@ -14,7 +14,7 @@ class WindowController(QObject):
         w_window.installEventFilter(self)
 
     def eventFilter(self, _, event:QEvent) -> bool:
-        if event.type() == QEvent.WindowActivate:
+        if event.type() == QEvent.Type.WindowActivate:
             self.activated.emit()
         return False
 
@@ -24,7 +24,7 @@ class WindowController(QObject):
         self._w_window.show()
         self._w_window.activateWindow()
         self._w_window.raise_()
-        QApplication.instance().processEvents()
+        QApplication.processEvents()
 
     def close(self) -> None:
         self._w_window.close()

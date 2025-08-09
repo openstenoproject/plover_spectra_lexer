@@ -2,7 +2,7 @@ import pkgutil
 import sys
 from typing import Callable, Sequence
 
-from PyQt5.QtWidgets import QDialog, QMainWindow
+from PySide6.QtWidgets import QDialog, QMainWindow
 
 from spectra_lexer import Spectra
 from spectra_lexer.config.main import QtConfigManager

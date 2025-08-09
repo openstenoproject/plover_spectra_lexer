@@ -10,6 +10,8 @@ import sys
 
 from setuptools import Command as stCommand, setup
 from setuptools.command import develop, install, sdist
+from wheel import bdist_wheel
+
 
 
 def iglob_all(*patterns):
@@ -47,15 +49,14 @@ class CommandNamespace:
 
     class build_ui(Command):
         description = "Build Python code from new/modified Qt UI files."
-        requires = "clean"
+        requires = ""
         def run(self):
             for src in iglob_all('**/*.ui'):
                 dst = os.path.splitext(src)[0] + '_ui.py'
                 if os.path.exists(dst) and os.path.getmtime(dst) >= os.path.getmtime(src):
                     continue
-                cmd = (sys.executable, '-m', 'PyQt5.uic.pyuic', '--from-import', src)
-                with open(dst, 'w') as fp:
-                    subprocess.run(cmd, stdout=fp, text=True)
+                cmd = ('pyside6-uic', '--from-imports', src,'-o',dst)
+                subprocess.run(cmd, text=True)
 
     class clean(Command):
         description = "Remove all build and test-generated files."
@@ -70,6 +71,9 @@ class CommandNamespace:
         requires = "build_ui"
 
     class install(BaseCommand, install.install):
+        requires = "build_ui"
+
+    class bdist_wheel(BaseCommand, bdist_wheel.bdist_wheel):
         requires = "build_ui"
 
     class run(Command):

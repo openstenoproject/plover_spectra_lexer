@@ -1,8 +1,8 @@
 from typing import Any, Callable
 
-from PyQt5.QtCore import pyqtSignal, QMimeData, Qt
-from PyQt5.QtGui import QFont, QKeyEvent, QTextCursor
-from PyQt5.QtWidgets import QDialog, QTextEdit, QVBoxLayout
+from PySide6.QtCore import Signal, QMimeData, Qt
+from PySide6.QtGui import QFont, QKeyEvent, QTextCursor
+from PySide6.QtWidgets import QDialog, QTextEdit, QVBoxLayout
 
 # Callbacks for terminal input and keyboard interrupts. Return values are ignored.
 InputCallback = Callable[[str], Any]
@@ -44,8 +44,8 @@ class TerminalTextWidget(QTextEdit):
         The "user text" comes after the prompt; it is freely modifiable by the user.
         When the user presses Enter, the user text is sent in a signal, then frozen into the base text. """
 
-    lineEntered = pyqtSignal([str])  # Sent with a line of user input on pressing Enter.
-    interrupted = pyqtSignal([])     # Sent when a Ctrl-C interrupt occurs.
+    lineEntered = Signal(str)  # Sent with a line of user input on pressing Enter.
+    interrupted = Signal()     # Sent when a Ctrl-C interrupt occurs.
 
     def __init__(self, *args) -> None:
         super().__init__(*args)
@@ -53,7 +53,7 @@ class TerminalTextWidget(QTextEdit):
         self._user_text = ""              # Last valid state of user input text.
         self._history = HistoryTracker()  # Tracks previous keyboard input.
         self.setFont(QFont("Courier New", 10))
-        self.setTextInteractionFlags(Qt.TextSelectableByMouse | Qt.TextEditorInteraction)
+        self.setTextInteractionFlags(Qt.TextInteractionFlag.TextSelectableByMouse | Qt.TextInteractionFlag.TextEditorInteraction)
         self.textChanged.connect(self._on_edited)
 
     def _set_cursor_valid(self) -> None:
@@ -61,7 +61,7 @@ class TerminalTextWidget(QTextEdit):
         c = self.textCursor()
         prompt_start = len(self._base_text)
         if c.position() < prompt_start:
-            c.movePosition(QTextCursor.End)
+            c.movePosition(QTextCursor.MoveOperation.End)
             self.setTextCursor(c)
 
     def _update(self) -> None:
@@ -111,18 +111,18 @@ class TerminalTextWidget(QTextEdit):
     def keyPressEvent(self, event:QKeyEvent) -> None:
         """ Parse keyboard input events for special cases. """
         key = event.key()
-        if key == Qt.Key_Up:
+        if key == Qt.Key.Key_Up:
             # Up - replace user text with the previous command history item.
             self._history_prev()
-        elif key == Qt.Key_Down:
+        elif key == Qt.Key.Key_Down:
             # Down - replace user text with the next command history item.
             self._history_next()
-        elif key in (Qt.Key_Return, Qt.Key_Enter):
+        elif key in (Qt.Key.Key_Return, Qt.Key.Key_Enter):
             # Enter - submit user text as terminal input.
             self._submit()
-        elif event.modifiers() & Qt.ControlModifier:
+        elif event.modifiers() & Qt.KeyboardModifier.ControlModifier:
             # Ctrl shortcuts have spurious event text.
-            if key == Qt.Key_C and not self.textCursor().selectedText():
+            if key == Qt.Key.Key_C and not self.textCursor().selectedText():
                 # Ctrl-C is an interrupt if no text is selected; otherwise it is a copy.
                 self.interrupted.emit()
             else:
@@ -146,7 +146,7 @@ class TerminalTextWidget(QTextEdit):
 class TerminalDialog(QDialog):
     """ Qt terminal dialog tool. """
 
-    DEFAULT_FLAGS = Qt.CustomizeWindowHint | Qt.Dialog | Qt.WindowCloseButtonHint | Qt.WindowTitleHint
+    DEFAULT_FLAGS = (Qt.WindowType.CustomizeWindowHint | Qt.WindowType.Dialog | Qt.WindowType.WindowCloseButtonHint | Qt.WindowType.WindowTitleHint)
 
     def __init__(self, parent=None, flags=DEFAULT_FLAGS) -> None:
         super().__init__(parent, flags)

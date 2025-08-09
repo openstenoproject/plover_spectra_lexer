@@ -2,7 +2,7 @@
 
 import sys
 
-from PyQt5.QtWidgets import QApplication
+from PySide6.QtWidgets import QApplication
 
 from spectra_lexer import Spectra, SpectraOptions
 from spectra_lexer.app_qt import build_app
@@ -18,7 +18,7 @@ def main() -> int:
         app.start()
     except Exception as e:
         sys.excepthook(type(e), e, e.__traceback__)
-    return q_app.exec_()
+    return q_app.exec()
 
 
 if __name__ == '__main__':

@@ -17,3 +17,7 @@ lib
 .idea
 .cache
 .local
+
+# Python virtual environments
+.venv
+venv
