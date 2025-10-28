@@ -29,11 +29,12 @@ class GraphTree(RuleMapping):
     def __getitem__(self, k:str) -> StenoRule:
         return self._tree_map[k]
 
-    def draw(self, ref="", *, intense=False, compat=False) -> HTMLGraph:
+    def draw(self, ref: str = "", *, intense: bool = False, compat: bool = False,
+            appearance: str = "light") -> HTMLGraph:
         """ Return an HTML text graph with <ref> highlighted.
             Highlight nothing if <ref> is blank. Use brighter highlighting colors if <intense> is True. """
         formatter = HTML_COMPAT if compat else HTML_STANDARD
-        return formatter.format(self._grid, ref, intense=intense)
+        return formatter.format(self._grid, ref, intense=intense, appearance=appearance)
 
 
 class GraphEngine:

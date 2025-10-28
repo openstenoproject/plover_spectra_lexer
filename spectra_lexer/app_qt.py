@@ -2,7 +2,9 @@ import pkgutil
 import sys
 from typing import Callable, Sequence
 
-from PySide6.QtWidgets import QDialog, QMainWindow
+from PySide6.QtWidgets import QDialog, QMainWindow, QApplication
+from PySide6.QtCore import Signal, QEvent
+from PySide6.QtGui import QPalette
 
 from spectra_lexer import Spectra
 from spectra_lexer.config.main import QtConfigManager
@@ -63,6 +65,22 @@ def cfg_spec() -> ConfigSpec:
     ]
 
 
+class ThemedMainWindow(QMainWindow):
+    """Main window subclass that emits a signal when the system theme / palette changes."""
+    themeChanged = Signal()
+
+    def changeEvent(self, event):
+        """Listen for theme / palette related changes from the OS and emit themeChanged."""
+        et = event.type()
+        if et in (
+            QEvent.Type.ThemeChange,
+            QEvent.Type.ApplicationPaletteChange,
+            QEvent.Type.PaletteChange,
+        ):
+            self.themeChanged.emit()
+
+        super().changeEvent(event)
+
 class QtGUIApplication(GUIHooks):
     """ Top-level object for Qt GUI operations. Contains all components for the application as a whole. """
 
@@ -74,10 +92,36 @@ class QtGUIApplication(GUIHooks):
         self._window = window
         self._dialogs = dialogs
         self._gui = gui
+        # Listen for theme / palette changes coming from the main window.
+        if isinstance(window._w_window, ThemedMainWindow):
+            window._w_window.themeChanged.connect(self._on_theme_changed)
 
-    def _show_page(self, focused:bool) -> None:
-        """ Display the current analysis page. """
-        html_graph = self._engine.draw_graph(intense=focused)
+    def _on_theme_changed(self) -> None:
+        """Called when the OS/theme appearance changes (light <-> dark).
+        Re-render the current page so text color updates.
+        """
+        focused = self.has_focus()
+        self._show_page(focused)
+
+    def _current_appearance(self) -> str:
+        """Return 'dark' or 'light' based on the current Qt palette.
+
+        We consider it 'dark' if the window text is lighter than the window background
+        (i.e. light text on dark bg).
+        """
+        palette: QPalette = QApplication.palette()
+        text_color = palette.color(QPalette.ColorRole.WindowText)
+        bg_color = palette.color(QPalette.ColorRole.Window)
+
+        # lightness() -> 0 (black) .. 255 (white)
+        if text_color.lightness() > bg_color.lightness():
+            return "dark"
+        return "light"
+
+    def _show_page(self, focused: bool) -> None:
+        """Display the current analysis page."""
+        appearance = self._current_appearance()
+        html_graph = self._engine.draw_graph(intense=focused, appearance=appearance)
         self._gui.set_graph(html_graph, focused=focused)
         caption = self._engine.get_caption()
         self._gui.set_caption(caption)
@@ -338,7 +382,7 @@ def build_app(spectra:Spectra) -> QtGUIApplication:
     exc_logger = ExceptionLogger(spectra.logger.log)
     exc_handler.add(exc_logger)
     sys.excepthook = exc_handler
-    w_window = QMainWindow()
+    w_window = ThemedMainWindow()
     window = WindowController(w_window)
     dialogs = DialogManager(w_window)
     gui = build_gui(w_window)

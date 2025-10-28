@@ -9,7 +9,8 @@ class TextElement:
 
     __slots__ = ["char", "ref", "color_index", "bold_at", "activators"]
 
-    def __init__(self, char:str, ref="", color_index=0, bold_at=10, activators:Container[str]=()) -> None:
+    def __init__(self, char: str, ref: str = "", color_index: int = 0,
+                 bold_at: int = 10, activators: Container[str] = ()) -> None:
         self.char = char                # Printed text character.
         self.ref = ref                  # Primary ref string - links to the node that was responsible for this element.
         self.color_index = color_index  # Numerical index to a table of RGB colors.
@@ -21,7 +22,7 @@ TextElementGrid = Sequence[Sequence[TextElement]]  # Indexable 2D grid of text e
 
 
 @lru_cache(maxsize=None)
-def _color_style(row:int, index:int, intense:bool) -> str:
+def _color_style(row: int, index: int, intense: bool) -> str:
     """ Return an RGB 0-255 hex color style based on a node's location and intensity. """
     # Start from pure blue. Add red with nesting depth, green with row index, and both with the intense flag.
     if not index:
@@ -42,16 +43,29 @@ _HTML_ESC = {"&": "&amp;", "<": "&lt;", ">": "&gt;"}  # HTML escape substitution
 class HTMLFormatter:
     """ Formatter for HTML text grids with CSS. Includes support for colors, boldface, and anchors. """
 
-    def __init__(self, *, header:str, footer:str, row_delim:str, cell_delim:str, stylesheet:str) -> None:
-        self._header = header          # Header for each graph (not including CSS styles).
-        self._footer = footer          # Footer for each graph (not including CSS styles).
-        self._row_delim = row_delim    # Delimiter to place between each row.
-        self._cell_delim = cell_delim  # Delimiter to place between each cell.
-        self._stylesheet = stylesheet  # CSS stylesheet. Required to stop anchor hyperlink behavior at minimum.
+    def __init__(self, *, header: str, footer: str,
+                 row_delim: str, cell_delim: str,
+                 stylesheet_template: str) -> None:
+        self._header = header                  # Header for each graph (not including CSS styles).
+        self._footer = footer                  # Footer for each graph (not including CSS styles).
+        self._row_delim = row_delim            # Delimiter to place between each row.
+        self._cell_delim = cell_delim          # Delimiter to place between each cell.
+        self._stylesheet_template = stylesheet_template  # CSS with placeholders.
 
-    def format(self, grid:TextElementGrid, target="", *, intense=False) -> str:
-        """ Format <grid> elements into a full HTML graph with <target> highlighted. """
-        sections = ['<style>', self._stylesheet, '</style>', self._header]
+    def format(self, grid: TextElementGrid, target: str = "",
+               *, intense: bool = False, appearance: str = "light") -> str:
+        """ Format <grid> elements into a full HTML graph with <target> highlighted.
+
+            appearance: "light" or "dark". Controls default text color.
+        """
+        if appearance == "dark":
+            text_color = "#FFFFFF"
+        else:
+            text_color = "#000000"
+
+        stylesheet = self._stylesheet_template.replace("__TEXT_COLOR__", text_color)
+
+        sections = ['<style>', stylesheet, '</style>', self._header]
         delim = self._cell_delim
         row = 0
         for r in grid:
@@ -92,8 +106,11 @@ HTML_STANDARD = HTMLFormatter(
     footer='</div>',
     row_delim="\n",
     cell_delim="",
-    stylesheet=f'.{ROOT_CSS_CLASS} {{display: inline-block; white-space: pre; cursor: pointer;}} '
-               f'.{ROOT_CSS_CLASS} a {{color: black; text-decoration: none;}} ')
+    stylesheet_template=(
+        f'.{ROOT_CSS_CLASS} {{display: inline-block; white-space: pre; cursor: pointer;}} '
+        f'.{ROOT_CSS_CLASS} a {{color: __TEXT_COLOR__; font-size:15px; text-decoration: none;}} '
+    ),
+)
 
 # Formatter using explicit HTML tables. Useful for browsers that have trouble lining up monospace fonts.
 # Adds additional styles needed for table elements.
@@ -102,6 +119,9 @@ HTML_COMPAT = HTMLFormatter(
     footer='</td></tr></table>',
     row_delim='</td></tr><tr><td>',
     cell_delim='</td><td>',
-    stylesheet=f'.{ROOT_CSS_CLASS} {{display: inline-block; white-space: pre; cursor: pointer; border-spacing: 0;}} '
-               f'.{ROOT_CSS_CLASS} a {{color: black; text-decoration: none;}} '
-               f'.{ROOT_CSS_CLASS} td {{padding: 0;}} ')
+    stylesheet_template=(
+        f'.{ROOT_CSS_CLASS} {{display: inline-block; white-space: pre; cursor: pointer; border-spacing: 0;}} '
+        f'.{ROOT_CSS_CLASS} a {{color: __TEXT_COLOR__; font-size:15px; text-decoration: none;}} '
+        f'.{ROOT_CSS_CLASS} td {{padding: 0;}} '
+    ),
+)
