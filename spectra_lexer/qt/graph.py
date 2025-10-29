@@ -1,13 +1,13 @@
-from PyQt5.QtCore import QUrl, pyqtSignal
-from PyQt5.QtGui import QTextCharFormat
-from PyQt5.QtWidgets import QTextBrowser
+from PySide6.QtCore import QUrl, Signal
+from PySide6.QtGui import QTextCharFormat
+from PySide6.QtWidgets import QTextBrowser
 
 
 class GraphWidget(QTextBrowser):
     """ GUI panel for displaying a monospaced HTML graph of the breakdown of text by steno rules.
         May also display plaintext output such as error messages and exceptions when necessary. """
 
-    selected = pyqtSignal([str, bool])  # Emitted with the ref string under the cursor and the focus state.
+    selected = Signal(str, bool)  # Emitted with the ref string under the cursor and the focus state.
 
     def __init__(self, *args) -> None:
         super().__init__(*args)

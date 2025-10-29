@@ -1,4 +1,4 @@
-Spectra Lexer
+Plover Spectra Lexer
 =============
 
 The Spectra Steno Lexer is an experimental tool for analyzing and matching patterns of steno keys against the text they produce using various rules from steno theories (mostly Plover theory). It also has advanced search functions for steno dictionaries as well as a highly capable SVG generator for steno board diagrams.
@@ -76,8 +76,13 @@ This software is currently experimental with many rules unaccounted for, so do n
 
 When searching from the lookup tool, if a word is chosen and there is more than one stroke entry for it, the lexer will analyze each one and select the one that has the best possibility of being "correct" (i.e. not a misstroke). This choice is based on, in order of importance: the number of steno keys matched to rules, the number of letters those rules cover, the number of "unusual" rules involved, and if all else fails, the total number of keys in the stroke.
 
-.. |Screenshot 1| image:: https://raw.githubusercontent.com/fourshade/spectra_lexer/master/doc/screenshot1.png
-.. |Screenshot 2| image:: https://raw.githubusercontent.com/fourshade/spectra_lexer/master/doc/screenshot2.png
-.. |Screenshot 3| image:: https://raw.githubusercontent.com/fourshade/spectra_lexer/master/doc/screenshot3.png
-.. |Screenshot 4| image:: https://raw.githubusercontent.com/fourshade/spectra_lexer/master/doc/screenshot4.png
-.. |Board Modes| image:: https://raw.githubusercontent.com/fourshade/spectra_lexer/master/doc/boardmodes.png
+.. |Screenshot 1| image:: https://raw.githubusercontent.com/openstenoproject/plover_spectra_lexer/refs/heads/main/doc/screenshot1.png
+.. |Screenshot 2| image:: https://raw.githubusercontent.com/openstenoproject/plover_spectra_lexer/refs/heads/main/doc/screenshot2.png
+.. |Screenshot 3| image:: https://raw.githubusercontent.com/openstenoproject/plover_spectra_lexer/refs/heads/main/doc/screenshot3.png
+.. |Screenshot 4| image:: https://raw.githubusercontent.com/openstenoproject/plover_spectra_lexer/refs/heads/main/doc/screenshot4.png
+.. |Board Modes| image:: https://raw.githubusercontent.com/openstenoproject/plover_spectra_lexer/refs/heads/main/doc/boardmodes.png
+
+Acknowledgments
+------------
+
+This software was forked from the `spectra_lexer repository by fourshade <https://github.com/fourshade/spectra_lexer>`__ (GPL-2.0 license).

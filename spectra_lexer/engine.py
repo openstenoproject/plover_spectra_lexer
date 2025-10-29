@@ -161,9 +161,14 @@ class Engine:
             return f'{keys} → {letters}: {info}'
         return f'{keys}: {info}'
 
-    def draw_graph(self, *, intense=False) -> HTMLGraph:
-        """ Generate an HTML text graph for the current rule. """
-        return self._graph.draw(self._ref, intense=intense, compat=self._opts.graph_compatibility_mode)
+    def draw_graph(self, *, intense: bool = False, appearance: str = "light") -> HTMLGraph:
+        """Generate an HTML text graph for the current rule."""
+        return self._graph.draw(
+            self._ref,
+            intense=intense,
+            compat=self._opts.graph_compatibility_mode,
+            appearance=appearance,
+        )
 
     def draw_board(self) -> BoardDiagram:
         """ Generate a board diagram for the current rule. """

@@ -1,8 +1,7 @@
 """ Module for Qt GUI config manager. """
 
-from PyQt5.QtCore import pyqtSignal, Qt
-from PyQt5.QtWidgets import QCheckBox, QDialog, QDialogButtonBox, QFormLayout, QFrame, QLabel, QLineEdit, QMessageBox, \
-    QTabWidget, QVBoxLayout, QWidget
+from PySide6.QtCore import Signal, Qt
+from PySide6.QtWidgets import QCheckBox, QDialog, QDialogButtonBox, QFormLayout, QFrame, QLabel, QLineEdit, QMessageBox,     QTabWidget, QVBoxLayout, QWidget
 
 from .spec import ConfigDict, ConfigSpec, Option, Section, SectionDict
 
@@ -71,9 +70,9 @@ class ConfigTabWidget(QTabWidget):
 class ConfigDialog(QDialog):
     """ Qt config manager dialog with an option tab widget and standard submission form buttons. """
 
-    WINDOW_FLAGS = Qt.CustomizeWindowHint | Qt.Dialog | Qt.WindowCloseButtonHint | Qt.WindowTitleHint
+    WINDOW_FLAGS = (Qt.WindowType.CustomizeWindowHint | Qt.WindowType.Dialog | Qt.WindowType.WindowCloseButtonHint | Qt.WindowType.WindowTitleHint)
 
-    submitted = pyqtSignal([dict])  # Signal to return config values on dialog accept.
+    submitted = Signal(dict)  # Signal to return config values on dialog accept.
 
     def __init__(self, parent:QWidget=None, flags=WINDOW_FLAGS) -> None:
         super().__init__(parent, flags)
@@ -82,7 +81,7 @@ class ConfigDialog(QDialog):
         self.setMaximumSize(250, 300)
         self._tabs = ConfigTabWidget(self)
         button_box = QDialogButtonBox(self)
-        button_box.setStandardButtons(QDialogButtonBox.Ok | QDialogButtonBox.Cancel)
+        button_box.setStandardButtons(QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Cancel)
         button_box.setCenterButtons(True)
         button_box.accepted.connect(self._submit)
         button_box.rejected.connect(self.reject)

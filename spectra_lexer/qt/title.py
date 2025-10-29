@@ -1,14 +1,14 @@
 from itertools import cycle
 from typing import Sequence
 
-from PyQt5.QtCore import pyqtSignal, QTimer
-from PyQt5.QtWidgets import QLineEdit
+from PySide6.QtCore import Signal, QTimer
+from PySide6.QtWidgets import QLineEdit
 
 
 class TitleWidget(QLineEdit):
     """ Title bar widget that displays plaintext as well as simple text animations. """
 
-    submitted = pyqtSignal([str])  # Emitted with the widget's current text when Enter is pressed.
+    submitted = Signal(str)  # Emitted with the widget's current text when Enter is pressed.
 
     def __init__(self, *args) -> None:
         super().__init__(*args)

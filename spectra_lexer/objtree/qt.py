@@ -2,14 +2,14 @@
 
 from collections import defaultdict
 from itertools import islice
-from typing import Any, Callable, Collection, Iterator, Sequence, TypeVar, Union
+from typing import Any, Callable, Collection, Iterator, Sequence, TypeVar, Union, DefaultDict, Generic
 
-from PyQt5.QtCore import QAbstractItemModel, QModelIndex, QSize, Qt
-from PyQt5.QtGui import QColor, QFont, QIcon, QImage, QPainter, QPixmap
-from PyQt5.QtSvg import QSvgRenderer
-from PyQt5.QtWidgets import QDialog, QTreeView, QVBoxLayout
+from PySide6.QtCore import QAbstractItemModel, QModelIndex, QPersistentModelIndex, QSize, Qt
+from PySide6.QtGui import QColor, QFont, QIcon, QImage, QPainter, QPixmap
+from PySide6.QtSvg import QSvgRenderer
+from PySide6.QtWidgets import QDialog, QTreeView, QVBoxLayout
 
-TreeItemData = TypeVar("TreeItemData")  # Marker class for a data structure with row formatting info.
+TreeItemDataT = TypeVar("TreeItemDataT")  # Type parameter for row data payloads.
 
 
 class SVGIconRenderer:
@@ -19,7 +19,7 @@ class SVGIconRenderer:
     TRANSPARENT_COLOR = QColor(255, 255, 255, 0)  # Transparent white default background color.
 
     # Icons are small but important. Use these render hints by default for best quality.
-    _HQ_RENDER_HINTS = QPainter.Antialiasing | QPainter.SmoothPixmapTransform
+    _HQ_RENDER_HINTS = (QPainter.RenderHint.Antialiasing | QPainter.RenderHint.SmoothPixmapTransform)
 
     def __init__(self, bg_color=TRANSPARENT_COLOR, *, render_hints=_HQ_RENDER_HINTS) -> None:
         self._bg_color = bg_color          # Background color for icons (transparent by default).
@@ -39,7 +39,7 @@ class SVGIconRenderer:
             data = data.encode('utf-8')
         svg = QSvgRenderer(data)
         viewbox = svg.viewBox().size()
-        im = QImage(viewbox, QImage.Format_ARGB32)
+        im = QImage(viewbox, QImage.Format.Format_ARGB32)
         im.fill(self._bg_color)
         with QPainter(im) as p:
             p.setRenderHints(self._render_hints)
@@ -47,15 +47,15 @@ class SVGIconRenderer:
         return QIcon(QPixmap.fromImage(im))
 
 
-class TreeItem:
+class TreeItem(Generic[TreeItemDataT]):
     """ A single item in the tree. Contains model data in attributes and role data in the dict. """
 
-    def __init__(self, parent:QModelIndex=None) -> None:
-        self._parent = parent   # Model index of the direct parent of this item (None for the root).
-        self._roles = {}        # Contains all display data for this item indexed by Qt roles (really ints).
-        self._edit_cb = None    # Callback to edit the value of this item, or None if not editable.
-        self._delete_cb = None  # Callback to delete this item, or None if not deletable.
-        self._children = ()     # Iterable collection that produces child data objects. Lazy iteration is advised.
+    def __init__(self, parent: QModelIndex = QModelIndex()) -> None:
+        self._parent: QModelIndex = parent   # Model index of the direct parent of this item (empty for the root).
+        self._roles: dict[int, Any] = {}     # Contains all display data for this item indexed by Qt roles (really ints).
+        self._edit_cb: Callable[[str], None] | None = None    # Callback to edit the value of this item, or None if not editable.
+        self._delete_cb: Callable[[], None] | None = None     # Callback to delete this item, or None if not deletable.
+        self._children: Collection[TreeItemDataT] = ()         # Iterable collection that produces child data objects.
 
     def role_data(self, role:int) -> Any:
         """ Return a role data item. Used heavily by the Qt item model. """
@@ -65,24 +65,27 @@ class TreeItem:
         """ Return this item's parent index. Used heavily by the Qt item model. """
         return self._parent
 
-    def flags(self) -> Qt.ItemFlags:
+    def flags(self) -> Qt.ItemFlag:
         """ Return a set of Qt display flags. Items are black and selectable by default. """
-        flags = Qt.ItemIsSelectable | Qt.ItemIsEnabled
+        flags = Qt.ItemFlag.ItemIsSelectable | Qt.ItemFlag.ItemIsEnabled
         if self._edit_cb is not None:
-            flags |= Qt.ItemIsEditable
+            flags |= Qt.ItemFlag.ItemIsEditable
         return flags
 
     def has_children(self) -> bool:
         """ Return True if at least one child data object will be yielded on iteration. """
         return bool(self._children)
 
-    def __iter__(self) -> Iterator[TreeItemData]:
+    def __iter__(self) -> Iterator[TreeItemDataT]:
         """ Yield all available child data objects. """
         return iter(self._children)
 
     def edit(self, new_value:str) -> bool:
         """ Attempt to change the object's actual value. Return True on success. """
         try:
+            if self._edit_cb is None:
+                self._edit_failed()
+                return False
             self._edit_cb(new_value)
             return True
         except Exception:
@@ -92,6 +95,9 @@ class TreeItem:
     def delete(self) -> bool:
         """ Attempt to delete the object from its container. Return True on success. """
         try:
+            if self._delete_cb is None:
+                self._edit_failed()
+                return False
             self._delete_cb()
             return True
         except Exception:
@@ -105,19 +111,19 @@ class TreeItem:
 
     def set_text(self, text:str) -> None:
         """ Set the primary text as shown in the tree columns. """
-        self._roles[Qt.DisplayRole] = text
+        self._roles[Qt.ItemDataRole.DisplayRole] = text
 
     def set_color(self, r:int, g:int, b:int) -> None:
         """ Set the color of the item's primary text. """
-        self._roles[Qt.ForegroundRole] = QColor(r, g, b)
+        self._roles[Qt.ItemDataRole.ForegroundRole] = QColor(r, g, b)
 
     def set_tooltip(self, tooltip:str) -> None:
         """ Set text to appear over the item as a tooltip on mouseover. """
-        self._roles[Qt.ToolTipRole] = f'<pre>{tooltip}</pre>'
+        self._roles[Qt.ItemDataRole.ToolTipRole] = f'<pre>{tooltip}</pre>'
 
     def set_icon(self, icon:QIcon) -> None:
         """ Set an icon to appear to the left of the item's text. """
-        self._roles[Qt.DecorationRole] = icon
+        self._roles[Qt.ItemDataRole.DecorationRole] = icon
 
     def set_edit_cb(self, callback:Callable[[str], None]) -> None:
         """ Set a callback that uses a string to edit the underlying object's value. """
@@ -127,42 +133,43 @@ class TreeItem:
         """ Set a callback that deletes the object from its container. """
         self._delete_cb = callback
 
-    def set_children(self, children:Collection[TreeItemData]) -> None:
+    def set_children(self, children: Collection[TreeItemDataT]) -> None:
         """ Set an iterable collection that will produce child data objects. """
         self._children = children
 
 
-class TreeColumn:
+class TreeColumn(Generic[TreeItemDataT]):
     """ Abstract class for a tree column with a certain item format. """
 
     heading: str  # Heading text that appears above this column.
     width = 0     # Default width (0 if not specified).
 
-    def generate_item(self, data:TreeItemData, parent:QModelIndex=None) -> TreeItem:
+    def generate_item(self, data: TreeItemDataT, parent: QModelIndex = QModelIndex()) -> TreeItem[TreeItemDataT]:
         """ Create and format a tree item from a data structure. """
         item = TreeItem(parent)
         self._format_item(item, data)
         return item
 
-    def _format_item(self, item:TreeItem, data:TreeItemData) -> None:
+    def _format_item(self, item: TreeItem[TreeItemDataT], data: TreeItemDataT) -> None:
         """ Format a tree item with attributes and Qt display roles from a data structure. """
         raise NotImplementedError
 
 
-class TreeItemModel(QAbstractItemModel):
+class TreeItemModel(QAbstractItemModel, Generic[TreeItemDataT]):
     """ A data model storing a tree of rows containing info about arbitrary Python objects. """
 
     _ROOT_IDX = QModelIndex()  # Sentinel value for the index of the root item.
 
-    def __init__(self, root_item:TreeItem, columns:Sequence[TreeColumn], *, child_limit=200, header_height=25) -> None:
+    def __init__(self, root_item: TreeItem[TreeItemDataT], columns: Sequence[TreeColumn[TreeItemDataT]], *, child_limit=200, header_height=25) -> None:
         super().__init__()
-        self._idx_to_item = {self._ROOT_IDX: root_item}  # Contains model indices mapped to tree items.
-        self._idx_to_children = defaultdict(list)        # Contains model indices mapped to grids of their children.
+        self._idx_to_item: dict[QModelIndex | QPersistentModelIndex, TreeItem[TreeItemDataT]] = {self._ROOT_IDX: root_item}  # Contains model indices mapped to tree items.
+        self._idx_to_children: DefaultDict[QModelIndex | QPersistentModelIndex, list[list[TreeItem[TreeItemDataT]]]] = defaultdict(list)        # Contains model indices mapped to grids of their children.
         self._columns = columns                          # Item formatter for each column in the tree.
         self._child_limit = child_limit                  # Maximum number of child rows to show for each object.
         self._header_height = header_height              # Height of column headers in pixels.
 
-    def index(self, row:int, col:int, parent:QModelIndex=_ROOT_IDX, *args) -> QModelIndex:
+
+    def index(self, row: int, col: int, parent: QPersistentModelIndex | QModelIndex = _ROOT_IDX, *args) -> QModelIndex:
         try:
             item = self._idx_to_children[parent][row][col]
             idx = self.createIndex(row, col, item)
@@ -171,39 +178,39 @@ class TreeItemModel(QAbstractItemModel):
         except IndexError:
             return self._ROOT_IDX
 
-    def data(self, idx:QModelIndex, role:int=Qt.DisplayRole) -> Any:
+    def data(self, idx: QPersistentModelIndex | QModelIndex, role: int = int(Qt.ItemDataRole.DisplayRole)) -> Any:
         return self._idx_to_item[idx].role_data(role)
 
-    def parent(self, idx:QModelIndex=_ROOT_IDX) -> QModelIndex:
+    def parent(self, idx: QPersistentModelIndex | QModelIndex) -> QModelIndex:  # type: ignore[override]
         return self._idx_to_item[idx].parent()
 
-    def flags(self, idx:QModelIndex) -> Qt.ItemFlags:
+    def flags(self, idx: QPersistentModelIndex | QModelIndex) -> Qt.ItemFlag:
         return self._idx_to_item[idx].flags()
 
-    def hasChildren(self, idx:QModelIndex=_ROOT_IDX, *args) -> bool:
-        return self._idx_to_item[idx].has_children()
+    def hasChildren(self, parent: QPersistentModelIndex | QModelIndex = _ROOT_IDX) -> bool:
+        return self._idx_to_item[parent].has_children()
 
-    def rowCount(self, idx:QModelIndex=_ROOT_IDX, *args) -> int:
-        return len(self._idx_to_children[idx])
+    def rowCount(self, parent: QPersistentModelIndex | QModelIndex = _ROOT_IDX) -> int:
+        return len(self._idx_to_children[parent])
 
-    def columnCount(self, *args) -> int:
+    def columnCount(self, parent: QPersistentModelIndex | QModelIndex = _ROOT_IDX) -> int:
         return len(self._columns)
 
-    def headerData(self, section:int, orientation:int, role:int=None) -> Any:
+    def headerData(self, section: int, orientation: Qt.Orientation, role: int = int(Qt.ItemDataRole.DisplayRole)) -> Any:
         """ Return captions or height for the header at the top of the window (or None for other roles). """
-        if orientation == Qt.Horizontal:
-            if role == Qt.DisplayRole:
+        if orientation == Qt.Orientation.Horizontal:
+            if role == Qt.ItemDataRole.DisplayRole:
                 return self._columns[section].heading
-            if role == Qt.SizeHintRole:
+            if role == Qt.ItemDataRole.SizeHintRole:
                 return QSize(self._columns[section].width, self._header_height)
 
-    def setData(self, idx:QModelIndex, new_value:str, *args) -> bool:
+    def setData(self, idx: QPersistentModelIndex | QModelIndex, new_value: Any, role: int = int(Qt.ItemDataRole.EditRole)) -> bool:
         """ Attempt to change an object's value. Re-expand the parent on success. """
         # A blank field will not evaluate to anything; the user just clicked off of the field.
         if not new_value:
             return False
         item = self._idx_to_item[idx]
-        if item.edit(new_value):
+        if item.edit(str(new_value)):
             self.expand(item.parent())
         # Either the value or the color will change, and either will affect the display, so return True.
         return True
@@ -230,7 +237,7 @@ class TreeItemModel(QAbstractItemModel):
 class TreeDialog(QDialog):
     """ Qt tree dialog window tool. """
 
-    DEFAULT_FLAGS = Qt.CustomizeWindowHint | Qt.Dialog | Qt.WindowCloseButtonHint | Qt.WindowTitleHint
+    DEFAULT_FLAGS = (Qt.WindowType.CustomizeWindowHint | Qt.WindowType.Dialog | Qt.WindowType.WindowCloseButtonHint | Qt.WindowType.WindowTitleHint)
 
     def __init__(self, parent=None, flags=DEFAULT_FLAGS) -> None:
         super().__init__(parent, flags)
@@ -242,14 +249,14 @@ class TreeDialog(QDialog):
         layout = QVBoxLayout(self)
         layout.addWidget(w_view)
 
-    def set_model(self, item_model:TreeItemModel) -> None:
+    def set_model(self, item_model: TreeItemModel[Any]) -> None:
         """ Connect an item model to the tree view widget and resize its headers. """
         item_model.expand()
         self._w_view.setModel(item_model)
         self._w_view.expanded.connect(item_model.expand)
         header = self._w_view.header()
         for i in range(header.count()):
-            size_hint = item_model.headerData(i, Qt.Horizontal, Qt.SizeHintRole)
+            size_hint = item_model.headerData(i, Qt.Orientation.Horizontal, Qt.ItemDataRole.SizeHintRole)
             width = size_hint.width()
             if width:
                 header.resizeSection(i, width)

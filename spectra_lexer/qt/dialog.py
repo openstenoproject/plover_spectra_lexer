@@ -1,7 +1,7 @@
 from typing import Callable, List
 from weakref import WeakValueDictionary
 
-from PyQt5.QtWidgets import QDialog, QFileDialog, QMessageBox, QWidget
+from PySide6.QtWidgets import QDialog, QFileDialog, QMessageBox, QWidget
 
 DialogOpener = Callable[[], QDialog]
 
@@ -42,7 +42,7 @@ class DialogManager:
 
     def yes_or_no(self, title:str, message:str) -> bool:
         """ Present a modal yes/no dialog and return the user's response as True/False. """
-        yes, no = QMessageBox.Yes, QMessageBox.No
+        yes, no = QMessageBox.StandardButton.Yes, QMessageBox.StandardButton.No
         button = QMessageBox.question(self._parent, title, message, yes | no)
         return button == yes
 

@@ -1,8 +1,8 @@
-from typing import Iterable, Mapping, Sequence
+from typing import Iterable, Mapping, Sequence, Optional
 
-from PyQt5.QtCore import pyqtSignal, QItemSelection, QObject, QStringListModel, Qt
-from PyQt5.QtGui import QWheelEvent
-from PyQt5.QtWidgets import QLineEdit, QListView
+from PySide6.QtCore import Signal, QItemSelection, QObject, QStringListModel, QItemSelectionModel, Qt
+from PySide6.QtGui import QWheelEvent
+from PySide6.QtWidgets import QLineEdit, QListView, QAbstractItemView
 
 StringIter = Iterable[str]
 StringSeq = Sequence[str]
@@ -14,41 +14,46 @@ MORE_TEXT = "[more...]"  # Show this text as the last item in the match list to 
 class SearchListWidget(QListView):
     """ QListView extension with strings that sends a signal when the selection has changed. """
 
-    itemSelected = pyqtSignal([str])  # Sent when a new list item is selected, with that item's string value.
+    itemSelected = Signal(str)  # Sent when a new list item is selected, with that item's string value.
 
     def __init__(self, *args, min_font_size=5, max_font_size=100) -> None:
         super().__init__(*args)
         self._min_font_size = min_font_size  # Minimum font size for list items in points.
         self._max_font_size = max_font_size  # Maximum font size for list items in points.
-        self.setModel(QStringListModel([]))
+        self._model: QStringListModel = QStringListModel([])
+        self.setModel(self._model)
 
     def setItems(self, str_iter:StringIter) -> None:
         """ Replace the list of items. This deselects every item, even ones that didn't change. """
-        self.model().setStringList(str_iter)
+        self._model.setStringList(list(str_iter))
 
-    def selectByValue(self, value:str=None, *, center_selection=False) -> None:
+    def selectByValue(self, value: Optional[str] = None, *, center_selection=False) -> None:
         """ Programmatically select a specific item by value if it exists. If it doesn't, clear the selection.
             Suppress signals to keep from tripping the selectionChanged event. """
         self.blockSignals(True)
         try:
-            model = self.model()
+            if value is None:
+                self.clearSelection()
+                return
+            model = self._model
             list_idx = model.stringList().index(value)
             model_idx = model.index(list_idx, 0)
             sel_model = self.selectionModel()
-            sel_model.select(model_idx, sel_model.SelectCurrent)
+            sel_model.select(model_idx, QItemSelectionModel.SelectionFlag.SelectCurrent)
             if center_selection:
                 # Put the selection as close as possible to the center of the viewing area.
-                self.scrollTo(model_idx, self.PositionAtCenter)
+                self.scrollTo(model_idx, QAbstractItemView.ScrollHint.PositionAtCenter)
         except ValueError:
             self.clearSelection()
-        self.blockSignals(False)
+        finally:
+            self.blockSignals(False)
 
     def selectedValue(self) -> str:
         """ Return the value of the first selected item (if any). """
         idxs = self.selectedIndexes()
         if not idxs:
             return ""
-        return self.model().data(idxs[0], Qt.DisplayRole)
+        return self._model.data(idxs[0], Qt.ItemDataRole.DisplayRole)
 
     def selectionChanged(self, selected:QItemSelection, deselected:QItemSelection) -> None:
         """ Send a signal on selection change with the first selected item (if any). """
@@ -59,7 +64,7 @@ class SearchListWidget(QListView):
 
     def wheelEvent(self, event:QWheelEvent) -> None:
         """ Change the font size if Ctrl is held down, otherwise scroll the list as usual. """
-        if not event.modifiers() & Qt.ControlModifier:
+        if not event.modifiers() & Qt.KeyboardModifier.ControlModifier:
             return super().wheelEvent(event)
         delta = event.angleDelta().y()
         sign = (delta // abs(delta)) if delta else 0
@@ -74,9 +79,9 @@ class SearchListWidget(QListView):
 class SearchPanel(QObject):
     """ Controls the three main search widgets. """
 
-    searchRequested = pyqtSignal([str, int])     # Emitted when a search operation is needed to refresh the lists.
-    queryRequested = pyqtSignal([str, str])      # Emitted when a query should be made with a single translation.
-    queryAllRequested = pyqtSignal([str, list])  # Emitted when a query should be made with multiple translations.
+    searchRequested = Signal(str, int)     # Emitted when a search operation is needed to refresh the lists.
+    queryRequested = Signal(str, str)      # Emitted when a query should be made with a single translation.
+    queryAllRequested = Signal(str, list)  # Emitted when a query should be made with multiple translations.
 
     def __init__(self, w_input:QLineEdit, w_matches:SearchListWidget, w_mappings:SearchListWidget) -> None:
         super().__init__(w_input)
@@ -146,7 +151,7 @@ class SearchPanel(QObject):
     def focus_input(self) -> None:
         """ Set focus to the search input box manually. """
         self._w_input.selectAll()
-        self._w_input.setFocus(Qt.OtherFocusReason)
+        self._w_input.setFocus(Qt.FocusReason.OtherFocusReason)
 
     def update_input(self, value:str) -> None:
         self._w_input.setText(value)

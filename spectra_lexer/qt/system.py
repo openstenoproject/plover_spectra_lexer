@@ -3,7 +3,7 @@
 from queue import Queue
 from typing import Callable, NoReturn
 
-from PyQt5.QtCore import pyqtSignal, QThread
+from PySide6.QtCore import Signal, QThread
 
 
 def _apply(func:Callable, args:tuple) -> None:
@@ -17,7 +17,7 @@ def _raise(exc:Exception) -> NoReturn:
 class QtTaskExecutor(QThread):
     """ Worker thread that executes long-running operations from a queue. """
 
-    _sig_call_main = pyqtSignal([object, tuple])  # Allows this thread to apply functions on the main event loop.
+    _sig_call_main = Signal(object, tuple)  # Allows this thread to apply functions on the main event loop.
 
     def __init__(self, *args) -> None:
         super().__init__(*args)

@@ -11,7 +11,7 @@ StringStenoDict = Dict[str, str]         # Dict of string-keyed Plover translati
 class IPlover:
     """ Data types and interfaces containing only what is necessary for compatibility with Plover. """
 
-    VERSION = "4.0.0.dev8"  # Plover version for which these interfaces are known to be valid.
+    VERSION = "5.0.0.dev3"  # Plover version for which these interfaces are known to be valid.
 
     class IncompatibleError(Exception):
         """ Raised if the installed Plover version is not compatible with this application. """
